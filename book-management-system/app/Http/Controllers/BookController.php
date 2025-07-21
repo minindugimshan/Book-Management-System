@@ -39,7 +39,7 @@ class BookController extends Controller
             ]);
         }
 
-        return redirect()->route('books.index')->with('success', 'Book created successfully.');
+        return redirect()->route('books.show', $book->id)->with('success', 'Book created successfully.');
     }
 
     public function show(Book $book)
