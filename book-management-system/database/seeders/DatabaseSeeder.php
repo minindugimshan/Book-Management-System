@@ -13,11 +13,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Disable foreign key checks
+        \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        \DB::table('subcategories')->truncate();
+        \DB::table('categories')->truncate();
+        \DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         // User::factory(10)->create();
 
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+        ]);
+
+        $this->call([
+            CategorySeeder::class,
         ]);
     }
 }
