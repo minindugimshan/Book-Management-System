@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
+use App\Models\Category;
+use App\Models\Subcategory;
 use App\Models\Image;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -11,71 +13,78 @@ class BookController extends Controller
 {
     public function index()
     {
-        $books = Book::with('image')->get();
+        $books = Book::with(['category', 'subcategory', 'images'])->get();
         return view('books.index', compact('books'));
     }
 
     public function create()
     {
-        return view('books.create');
+        $categories = Category::all();
+        $subcategories = Subcategory::all();
+        return view('books.create', compact('categories', 'subcategories'));
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
             'title' => 'required|string|max:255',
             'author' => 'required|string|max:255',
-            'publication_year' => 'required|digits:4|integer|min:1000|max:' . (date('Y')),
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'publication_year' => 'required|integer',
+            'category_id' => 'required|exists:categories,id',
+            'subcategory_id' => 'required|exists:subcategories,id',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
-        $book = Book::create($validated);
+        $book = Book::create($request->only('title', 'author', 'publication_year', 'category_id', 'subcategory_id'));
 
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('images', 'public');
-            Image::create([
-                'book_id' => $book->id,
-                'image_path' => $path,
-            ]);
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('book_images', 'public');
+                Image::create([
+                    'book_id' => $book->id,
+                    'image_path' => $path,
+                ]);
+            }
         }
 
-        return redirect()->route('books.show', $book->id)->with('success', 'Book created successfully.');
+        return redirect()->route('books.index')->with('success', 'Book created successfully.');
     }
 
     public function show(Book $book)
     {
-        $book->load('image');
+        $book->load(['category', 'subcategory', 'images']);
         return view('books.show', compact('book'));
     }
 
     public function edit(Book $book)
     {
-        $book->load('image');
-        return view('books.edit', compact('book'));
+        $categories = Category::all();
+        $subcategories = Subcategory::all();
+        $book->load('images');
+        return view('books.edit', compact('book', 'categories', 'subcategories'));
     }
 
     public function update(Request $request, Book $book)
     {
-        $validated = $request->validate([
+        $request->validate([
             'title' => 'required|string|max:255',
             'author' => 'required|string|max:255',
-            'publication_year' => 'required|digits:4|integer|min:1000|max:' . (date('Y')),
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'publication_year' => 'required|integer',
+            'category_id' => 'required|exists:categories,id',
+            'subcategory_id' => 'required|exists:subcategories,id',
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
-        $book->update($validated);
+        $book->update($request->only('title', 'author', 'publication_year', 'category_id', 'subcategory_id'));
 
-        if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($book->image) {
-                Storage::disk('public')->delete($book->image->image_path);
-                $book->image->delete();
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $path = $image->store('book_images', 'public');
+                Image::create([
+                    'book_id' => $book->id,
+                    'image_path' => $path,
+                ]);
             }
-            $path = $request->file('image')->store('images', 'public');
-            Image::create([
-                'book_id' => $book->id,
-                'image_path' => $path,
-            ]);
         }
 
         return redirect()->route('books.index')->with('success', 'Book updated successfully.');
@@ -83,10 +92,10 @@ class BookController extends Controller
 
     public function destroy(Book $book)
     {
-        // Delete image if exists
-        if ($book->image) {
-            Storage::disk('public')->delete($book->image->image_path);
-            $book->image->delete();
+        // Delete images from storage
+        foreach ($book->images as $image) {
+            Storage::disk('public')->delete($image->image_path);
+            $image->delete();
         }
         $book->delete();
         return redirect()->route('books.index')->with('success', 'Book deleted successfully.');
