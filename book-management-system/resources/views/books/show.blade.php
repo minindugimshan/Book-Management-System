@@ -2,16 +2,19 @@
 
 @section('content')
     <h1>Book Details</h1>
-    <div class="card" style="width: 24rem;">
-        @if($book->image)
-            <img src="{{ asset('storage/' . $book->image->image_path) }}" class="card-img-top" alt="Book Image">
-        @endif
-        <div class="card-body">
-            <h5 class="card-title">{{ $book->title }}</h5>
-            <p class="card-text"><strong>Author:</strong> {{ $book->author }}</p>
-            <p class="card-text"><strong>Publication Year:</strong> {{ $book->publication_year }}</p>
-            <a href="{{ route('books.edit', $book) }}" class="btn btn-warning">Edit</a>
-            <a href="{{ route('books.index') }}" class="btn btn-secondary">Back to List</a>
+    <p><strong>ID:</strong> {{ $book->id }}</p>
+    <p><strong>Title:</strong> {{ $book->title }}</p>
+    <p><strong>Author:</strong> {{ $book->author }}</p>
+    <p><strong>Publication Year:</strong> {{ $book->publication_year }}</p>
+    <p><strong>Category:</strong> {{ $book->category->name ?? '-' }}</p>
+    <p><strong>Subcategory:</strong> {{ $book->subcategory->name ?? '-' }}</p>
+    <p><strong>Images:</strong>
+        <div>
+            @foreach($book->images as $image)
+                <img src="{{ asset('storage/' . $image->image_path) }}" alt="Book Image" width="80" height="80">
+            @endforeach
         </div>
-    </div>
+    </p>
+    <a href="{{ route('books.edit', $book) }}" class="btn btn-warning">Edit</a>
+    <a href="{{ route('books.index') }}" class="btn btn-secondary">Back</a>
 @endsection
